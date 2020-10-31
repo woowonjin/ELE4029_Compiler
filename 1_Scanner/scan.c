@@ -191,6 +191,8 @@ TokenType getToken(void)
          }
          else if (c == '/')
              state = START;
+         else if (c == '*')
+             state = INCOMMENT_;
          else
             state = INCOMMENT;
          break;
