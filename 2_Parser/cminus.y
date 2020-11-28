@@ -23,7 +23,10 @@ static int yylex(void); // added 11/2/11 to ensure no conflict with lex
 
 %token IF ELSE WHILE RETURN INT VOID
 %token ID NUM 
-%token ASSIGN EQ NE LT LE GT GE PLUS MINUS TIMES OVER
+%token EQ NE LT LE GT GE
+%right ASSIGN
+%left PLUS MINUS
+%left TIMES OVER
 %token LPAREN RPAREN LBRACE RBRACE LCURLY RCURLY SEMI COMMA
 %token ERROR 
 
