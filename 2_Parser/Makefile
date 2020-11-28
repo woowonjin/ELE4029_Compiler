@@ -43,4 +43,4 @@ cgen.o: cgen.c globals.h y.tab.h symtab.h code.h cgen.h
 	$(CC) $(CFLAGS) -c cgen.c
 
 clean:
-	rm -vf $(OBJS) lex.yy.c y.tab.h y.tab.c cminus
+	rm -vf $(OBJS) lex.yy.c y.tab.h y.tab.c cminus y.output

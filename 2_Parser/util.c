@@ -251,7 +251,7 @@ void printTree( TreeNode * tree )
             fprintf(listing, "Array parameter, name : %s, ", tree->attr.name);
             break;
         case NonArrParamK:
-            fprintf(listing, "NonArray parameter, name : %s, ", tree->attr.name);
+            fprintf(listing, "Single parameter, name : %s, ", tree->attr.name);
             break;
         default:
           fprintf(listing,"Unknown ParamNode kind\n");
@@ -270,6 +270,7 @@ void printTree( TreeNode * tree )
                     fprintf(listing, "void\n");
                     break;
             }
+            break;
         default:
           fprintf(listing,"Unknown TypeNode kind\n");
           break;                    
