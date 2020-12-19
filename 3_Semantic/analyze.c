@@ -47,6 +47,15 @@ static void nullProc(TreeNode * t)
   else return;
 }
 
+
+static void insertIOFunc(void){ 
+   st_insert(globalScope, "output", Void, 0, 0, TRUE); 
+   globalScope->location++;
+   BucketList output = st_lookat(globalScope, "output");
+   output->params[0] = Integer;
+   output->paramNumber++;
+   st_insert(globalScope, "input", Integer, 0, 1, TRUE); 
+}
 /* Procedure insertNode inserts 
  * identifiers stored in t into 
  * the symbol table 
@@ -75,17 +84,8 @@ static void insertNode( TreeNode * t)
         case CallK:
           tempName = t->attr.name;
           tempBucket = st_lookup(currentScope, tempName);
-          for(int i = 0; i < SIZE; i++){
-            if(globalScope->bucket[i] != NULL){
-                BucketList temp_b = globalScope->bucket[i];
-                while(temp_b != NULL){
-                    fprintf(listing, "%s\n", temp_b->name);
-                    temp_b = temp_b->next;
-                }
-            }
-          }
           if(tempBucket == NULL){ /*error*/
-            fprintf(listing, "Error : this id is not declared before!! \n");
+            fprintf(listing, "Error at line(%d), name=%s : This Variable is not declared before!! \n", t->lineno, t->attr.name);
             break;
           }
           else{
@@ -103,11 +103,11 @@ static void insertNode( TreeNode * t)
       { case FuncK:
           funcName = t->attr.name;
           if(st_lookat(globalScope, funcName)){
-            fprintf(listing, "Error : function redeclared!!\n");
+            fprintf(listing, "Error at line(%d), name=%s : Function Redeclaration Error!!\n", t->lineno, funcName);
             break;
           }
           if(currentScope != globalScope){
-            fprintf(listing, "Error : you can declare function only in global!!\n");
+            fprintf(listing, "Error at line(%d), name=%s : Function Declaration only in global!!\n", t->lineno, funcName);
             break;
           }
           isForFunc = TRUE;
@@ -133,7 +133,7 @@ static void insertNode( TreeNode * t)
               currentScope->location++;
           }
           else{
-            fprintf(listing, "Error : Variable redeclared!!\n");
+            fprintf(listing, "Error at line(%d), name=(%s) : Variable Redeclaration Error!!\n", t->lineno, t->attr.name);
             break;
           }
           tempName = NULL;
@@ -145,7 +145,7 @@ static void insertNode( TreeNode * t)
               currentScope->location++;
           }
           else{
-            fprintf(listing, "Error : Array Variable redeclared!!\n");
+            fprintf(listing, "Error at line(%d), name=(%s) : ArrayVariable Redeclaration Error!!\n", t->lineno, tempName);
             break;
           }
           tempName = NULL;
@@ -170,10 +170,11 @@ static void insertNode( TreeNode * t)
                 temp = IntegerArray;
             }
             st_insert(currentScope, t->attr.name, temp, t->lineno, currentScope->location, 0);
+            insertFuncParam(currentScope->name, temp);
             currentScope->location++;
         }
         else{ /*Error*/
-            fprintf(listing, "Error: Parameter redeclared!!\n");
+            fprintf(listing, "Error at line(%d), name=(%s): Parameter Redeclaration Error!!\n", t->lineno, t->attr.name);
         }
       break;
 
@@ -194,6 +195,7 @@ static void afterInsertNode(TreeNode* t){
 void buildSymtab(TreeNode * syntaxTree)
 { globalScope = create_scope("global");
   currentScope = globalScope;
+  insertIOFunc();
   traverse(syntaxTree,insertNode,afterInsertNode);
   /*if (TraceAnalyze)
   { fprintf(listing,"\nSymbol table:\n\n");
@@ -209,19 +211,26 @@ static void typeError(TreeNode * t, char * message)
 /* Procedure checkNode performs
  * type checking at a single tree node
  */
+/*static void beforeCheckNode(TreeNode* t){
+   switch(t->nodekind){
+       case DeclK:
+           if(t->kind.decl == FuncK){
+                funcName = t->attr.name;
+           }
+           break;
+       case StmtK:
+           if(t->kind.stmt == CompK){
+                fprintf(listing, ""); 
+           }
+   }
+}*/
+
+
 static void checkNode(TreeNode * t)
-{ /*switch (t->nodekind)
+{ switch (t->nodekind)
   { case ExpK:
       switch (t->kind.exp)
       { case OpK:
-          if ((t->child[0]->type != Integer) ||
-              (t->child[1]->type != Integer))
-            typeError(t,"Op applied to non-integer");
-          if ((t->attr.op == EQ) || (t->attr.op == LT))
-            t->type = Boolean;
-          else
-            t->type = Integer;
-          break;
         case ConstK:
         case IdK:
           t->type = Integer;
@@ -232,30 +241,74 @@ static void checkNode(TreeNode * t)
       break;
     case StmtK:
       switch (t->kind.stmt)
-      { case IfK:
-          if (t->child[0]->type == Integer)
-            typeError(t->child[0],"if test is not Boolean");
+      {case IfK:
+          if(t->child[0] == NULL){
+            fprintf(listing, "ERROR at line(%d) : Conditional Expression is need\n", t->lineno);
+            break;
+          }
+          if(t->child[0]->type == Void){
+            fprintf(listing, "ERROR at line(%d) : Conditional Expression cannot be VOID\n", t->lineno);
+            break;
+          }
           break;
-        case AssignK:
-          if (t->child[0]->type != Integer)
-            typeError(t->child[0],"assignment of non-integer value");
+        case IfEK:
+          if(t->child[0] == NULL){
+            fprintf(listing, "ERROR at line(%d) : If Conditional Expression is need\n", t->lineno);
+            break;
+          }
+          if(t->child[0]->type == Void){
+            fprintf(listing, "ERROR at line(%d) : If Conditional Expression cannot be VOID\n", t->lineno);
+            break;
+          }
           break;
-        case WriteK:
-          if (t->child[0]->type != Integer)
-            typeError(t->child[0],"write of non-integer value");
+        case IterK:
+          if(t->child[0] == NULL){
+            fprintf(listing, "ERROR at line(%d) : LOOP Conditional Expression is need\n", t->lineno);
+            break;
+          }
+          if(t->child[0]->type == Void){
+            fprintf(listing, "ERROR at line(%d) : LOOP Conditional Expression cannot be VOID\n", t->lineno);
+            break;
+          }
           break;
-        case RepeatK:
-          if (t->child[1]->type == Integer)
-            typeError(t->child[1],"repeat test is not Boolean");
+        case RetK:
+          if(t->child[0] != NULL){
+            fprintf(listing, "return have exp and exp is \n"); 
+          }
           break;
         default:
           break;
       }
       break;
+    case DeclK:
+      switch(t->kind.decl){
+          case VarK:
+              if(t->child[0] == NULL){
+                fprintf(listing, "ERROR at line(%d), name(%s) : Variable type cannot be NULL\n", t->lineno, t->attr.name);
+                break;
+              }
+              if(t->child[0]->attr.type == VOID){
+                  fprintf(listing, "ERROR at line(%d), name=%s : Variable type cannot be Void\n", t->lineno, t->attr.name);
+              }
+              break;
+          case ArrVarK:
+              if(t->child[0] == NULL){
+                fprintf(listing, "ERROR at line(%d), name(%s) : Variable type cannot be NULL\n", t->lineno, t->attr.arr.name);
+                break;
+              }
+              if(t->child[0]->attr.type == VOID){
+                  fprintf(listing, "ERROR at line(%d), name=%s : Variable type cannot be Void\n", t->lineno, t->attr.arr.name);
+              }
+              break;
+      }
+        break;
+    case ParamK:
+        /* All Function is declared so it is not necessary*/
+        break;
     default:
       break;
 
-  }*/
+  }
 }
 
 /* Procedure typeCheck performs type checking 

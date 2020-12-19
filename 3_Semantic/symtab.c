@@ -85,6 +85,11 @@ void st_insert(ScopeList scope ,char * name, ExpType type, int lineno, int loc, 
     l->lines->lineno = lineno;
     l->memloc = loc;
     l->isFunc = isFunc;
+    for(int i = 0; i < 10; i++){
+        l->params[i] = Void;
+    }
+    if(isFunc)
+        l->paramNumber = 0;
     l->type = type;
     l->lines->next = NULL;
     l->next = NULL;
@@ -143,13 +148,18 @@ BucketList st_lookat (ScopeList scope, char * name ){
       l = l->next;
   return l;
 }
+
+void insertFuncParam(char* func, ExpType type){
+    BucketList bucket = st_lookat(globalScope, func);
+    bucket->params[bucket->paramNumber++] = type;
+}
 /* Procedure printSymTab prints a formatted 
  * listing of the symbol table contents 
  * to the listing file
  */
 void printSymTab(FILE * listing)
-{   fprintf(listing,"Variable Name  Variable Type  Scope Name  Location   Line Numbers\n");
-    fprintf(listing,"-------------  -------------  ----------  --------   ------------\n");
+{   fprintf(listing,"Variable Name  Variable Type  Scope Name  Location   Line Numbers   params\n");
+    fprintf(listing,"-------------  -------------  ----------  --------   ------------   ------\n");
     ScopeList scope = globalScope;
     while(scope != NULL){
         for(int i = 0; i < SIZE; i++){
@@ -158,22 +168,33 @@ void printSymTab(FILE * listing)
             }
             BucketList bucket = scope->bucket[i];
             while(bucket != NULL){
-                fprintf(listing, "%s     ", bucket->name);
+                fprintf(listing, "%s              ", bucket->name);
                 if(bucket->isFunc == 1)
                     fprintf(listing, "Function");
                 else{
                     if(bucket->type == Integer)
-                        fprintf(listing, "Integer");
+                        fprintf(listing, "    Integer");
                     else if(bucket->type == IntegerArray)
                         fprintf(listing, "IntegerArray");
                     else
                         fprintf(listing, "Void");
                 }
-                fprintf(listing, "     %s     %d     ", scope->name, bucket->memloc);
+                fprintf(listing, "     %s     %d            ", scope->name, bucket->memloc);
                 LineList line = bucket->lines;
                 while(line != NULL){
                     fprintf(listing, "%d ", line->lineno);
                     line = line->next;
+                }
+                fprintf(listing, "     ");
+                for(int i = 0; i < bucket->paramNumber; i++){
+                    if(bucket->params[i] == Integer){
+                        fprintf(listing, "int, ");
+                    }
+                    else if(bucket->params[i] == IntegerArray){
+                        fprintf(listing, "intArr, ");
+                    }
+                    else{
+                    }
                 }
                 fprintf(listing, "\n");
                 bucket = bucket->next;

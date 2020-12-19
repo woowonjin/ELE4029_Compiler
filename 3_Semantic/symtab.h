@@ -34,6 +34,8 @@ typedef struct BucketListRec
      int memloc ; /* memory location for variable */
      int isFunc;
      struct BucketListRec * next;
+     ExpType params[10];
+     int paramNumber;
    } * BucketList;
 
 /* The record for each scope,
@@ -68,6 +70,7 @@ void add_line(BucketList bucket ,int lineno);
 BucketList st_lookup(ScopeList scope, char * name );
 BucketList st_lookat(ScopeList scope, char* name);
 BucketList st_lookup_excluding_parent(ScopeList* scope, char* name);
+void insertFuncParam(char* func, ExpType type);
 /* Procedure printSymTab prints a formatted 
  * listing of the symbol table contents 
  * to the listing file
