@@ -158,8 +158,8 @@ void insertFuncParam(char* func, ExpType type){
  * to the listing file
  */
 void printSymTab(FILE * listing)
-{   fprintf(listing,"Variable Name  Variable Type  Scope Name  Location   Line Numbers   params\n");
-    fprintf(listing,"-------------  -------------  ----------  --------   ------------   ------\n");
+{   fprintf(listing,"Variable Name  Variable Type  Scope Name  Location   Line Numbers   params   parentScope\n");
+    fprintf(listing,"-------------  -------------  ----------  --------   ------------   ------   -----------\n");
     ScopeList scope = globalScope;
     while(scope != NULL){
         for(int i = 0; i < SIZE; i++){
@@ -195,6 +195,9 @@ void printSymTab(FILE * listing)
                     }
                     else{
                     }
+                }
+                if(scope->parent != NULL){
+                    fprintf(listing, "    %s", scope->parent->name);
                 }
                 fprintf(listing, "\n");
                 bucket = bucket->next;

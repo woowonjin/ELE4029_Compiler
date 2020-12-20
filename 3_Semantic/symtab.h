@@ -63,6 +63,7 @@ typedef struct ScopeListRec
 void st_insert(ScopeList scope, char * name, ExpType type, int lineno, int loc, int isFunc );
 
 ScopeList create_scope(char* name);
+ScopeList find_scope(char* name);
 /* Function st_lookup returns BucketList 
  *
  */
