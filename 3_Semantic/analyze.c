@@ -269,21 +269,51 @@ static void checkNode(TreeNode * t)
           }
           // integer array but type is void
           else if(lhs->type == IntegerArray && rhs->type == Integer){
-            fprintf(listing, "ERROR at line(%d) : Invalid variable type\n", t->lineno);
+            fprintf(listing, "ERROR at line(%d) : Variable type does not match\n", t->lineno);
           }
           else if(lhs->type == Integer && rhs->type == IntegerArray){
-            fprintf(listing, "ERROR at line(%d) : Invalid variable type\n", t->lineno);
+            fprintf(listing, "ERROR at line(%d) : Variable type does not match\n", t->lineno);
           }
           else
               t->type = t->child[0]->type;
           }
           break;
         case OpK:
+          { TreeNode* left = t->child[0];
+            TreeNode* right = t->child[1];
+            if(left->type == Void || right->type == Void){
+                fprintf(listing, "ERROR at line(%d): Operand type cannot be Void\n", t->lineno);
+                break;
+            }
+            ExpType leftType = left->type;
+            ExpType rightType = right->type;
+            if(left->type == IntegerArray && left->child[0] != NULL){
+                // Element of Array
+                leftType = Integer;
+            }
+            if(right->type == IntegerArray && right->child[0] != NULL){
+                // Element of Array
+                rightType = Integer;
+            }
+
+            if(leftType != rightType){
+                fprintf(listing, "ERROR at line(%d) : Operand Type does not match\n", t->lineno);
+                break;
+            }
+            t->type = Integer;
+          }
           break;
         case ConstK:
+          t->type = Integer;
           break;
         case IdK:
-          t->type = Integer;
+          { BucketList id = st_lookup(currentScope, t->attr.name);
+            if(id == NULL){
+                fprintf(listing, "ERROR : Something Wrong\n");
+                break;
+            }
+            t->type = id->type; 
+          }
           break;
         case ArrIdK:
           break;
@@ -344,11 +374,17 @@ static void checkNode(TreeNode * t)
                     fprintf(listing, "ERROR at line(%d) : Should Return Something Error\n", t->lineno); 
               }
               else{
-                BucketList returnStmt = st_lookup(currentScope, t->child[0]->attr.name);
-                if(func->type != returnStmt->type){
-                    fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
+                if(t->child[0]->nodekind == ExpK && t->child[0]->kind.exp == ConstK){
+                    if(func->type != Integer)
+                        fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
                 }
-              }
+                else{
+                    BucketList returnStmt = st_lookup(currentScope, t->child[0]->attr.name);
+                    if(func->type != returnStmt->type){
+                        fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
+                    }
+                }
+            }
           }
           }
           break;
