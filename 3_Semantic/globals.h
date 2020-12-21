@@ -78,7 +78,7 @@ typedef struct arrayAttr{
 } ArrayAttr;
 
 /* ExpType is used for type checking */
-typedef enum {Void,Integer, IntegerArray, Boolean} ExpType;
+typedef enum {Void,Integer, IntegerArray} ExpType;
 
 #define MAXCHILDREN 3
 
