@@ -266,16 +266,26 @@ static void checkNode(TreeNode * t)
           ExpType lhsType;
           ExpType rhsType;
           //fprintf(listing, "AssignK\n");
-          if(t->child[0]->kind.exp != ConstK && t->child[0]->kind.exp != OpK){
+          if(t->child[0]->kind.exp != ConstK && t->child[0]->kind.exp != OpK && t->child[0]->kind.exp != CallK){
             BucketList lhs = st_lookup(currentScope, t->child[0]->attr.name);
-            lhsType = lhs->type;
+            if(lhs->type == IntegerArray){
+                lhsType = t->child[0]->type;
+            }
+            else{
+                lhsType = lhs->type;
+            }
           }
           else
               lhsType = t->child[0]->type;
           //fprintf(listing, "AssignK\n");
-          if(t->child[1]->kind.exp != ConstK && t->child[1]->kind.exp != OpK){
+          if(t->child[1]->kind.exp != ConstK && t->child[1]->kind.exp != OpK && t->child[1]->kind.exp != CallK){
             BucketList rhs = st_lookup(currentScope, t->child[1]->attr.name);
-            rhsType = rhs->type;
+            if(rhs->type == IntegerArray){
+                rhsType = t->child[1]->type;
+            }
+            else{
+                rhsType = rhs->type;
+            }
           }
           else
               rhsType = t->child[1]->type;
@@ -349,7 +359,37 @@ static void checkNode(TreeNode * t)
           }
           break;
         case CallK:
-          fprintf(listing, "CallK !!\n");
+          { BucketList func = st_lookat(globalScope, t->attr.name);
+            if(func == NULL){
+                fprintf(listing, "ERROR at line(%d) : Function not declared before", t->lineno);
+                break;
+            }
+            int argCnt = 0;
+            TreeNode* arg = t->child[0];
+            int cntError = 0;
+            while(arg != NULL){
+                if(arg->type != func->params[argCnt]){
+                    fprintf(listing, "ERROR at line(%d) : Argument type does not match\n", t->lineno);
+                    break;
+                }
+                argCnt++;
+                arg = arg->sibling;
+                if(argCnt > func->paramNumber){
+                    fprintf(listing, "ERROR at line(%d) : Argument Count does not match\n", t->lineno);
+                    cntError = 1;
+                    break;
+                }
+            }
+            if(cntError == 0){
+                if(argCnt != func->paramNumber){
+                    fprintf(listing, "ERROR at line(%d) : Argument Count does not match\n", t->lineno);
+                    break;
+                }
+                else{
+                    t->type = func->type;
+                }
+            }
+          }
           break;
         default:
           break;
