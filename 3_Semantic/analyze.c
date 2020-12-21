@@ -139,7 +139,7 @@ static void insertNode( TreeNode * t)
           break;
         case VarK:
           tempName = t->attr.name;
-          if(st_lookup(currentScope, tempName) == NULL){
+          if(st_lookat(currentScope, tempName) == NULL){
               t->type = Integer;
               st_insert(currentScope, tempName, Integer, t->lineno, currentScope->location, 0);
               currentScope->location++;
@@ -152,7 +152,7 @@ static void insertNode( TreeNode * t)
           break;
         case ArrVarK:
           tempName = t->attr.arr.name;
-          if(st_lookup(currentScope, tempName) == NULL){
+          if(st_lookat(currentScope, tempName) == NULL){
               t->type = IntegerArray;
               st_insert(currentScope, tempName, IntegerArray, t->lineno, currentScope->location, 0);
               currentScope->location++;
@@ -174,7 +174,7 @@ static void insertNode( TreeNode * t)
             break;
         }
 
-        if(st_lookup(currentScope, t->attr.name) == NULL){
+        if(st_lookat(currentScope, t->attr.name) == NULL){
             ExpType temp;
             if(t->kind.param == NonArrParamK){
                 temp = Integer;
@@ -260,18 +260,23 @@ static void checkNode(TreeNode * t)
   switch (t->nodekind)
   { case ExpK:
       switch (t->kind.exp)
-      { case AssingK:
-          //var but type is void
-          if(t->child[0]->type == Void || t->child[1]->type == Void){
-            fprintf(listing, "ERROR at line(%d) : Invalid variable type", t->lineno);
+      { case AssignK:
+          {//var but type is void
+          BucketList lhs = st_lookup(currentScope, t->child[0]->attr.name);
+          BucketList rhs = st_lookup(currentScope, t->child[1]->attr.name);
+          if(lhs->type == Void || rhs->type == Void){
+            fprintf(listing, "ERROR at line(%d) : Variable type cannot be Void\n", t->lineno);
           }
           // integer array but type is void
-          else if(t->child[0]->type == IntegerArray && t->child[0]->child[0] == NULL)
-            fprintf(listing, "ERROR at line(%d) : Invalid variable type", t->lineno);
-          else if(t->child[1]->type == IntegerArray && t->child[1]->child[0] == NULL)
-            fprintf(listing, "ERROR at line(%d) : Invalid variable type", t->lineno);
+          else if(lhs->type == IntegerArray && rhs->type == Integer){
+            fprintf(listing, "ERROR at line(%d) : Invalid variable type\n", t->lineno);
+          }
+          else if(lhs->type == Integer && rhs->type == IntegerArray){
+            fprintf(listing, "ERROR at line(%d) : Invalid variable type\n", t->lineno);
+          }
           else
               t->type = t->child[0]->type;
+          }
           break;
         case OpK:
           break;
@@ -292,7 +297,7 @@ static void checkNode(TreeNode * t)
       switch (t->kind.stmt)
       {case IfK:
           if(t->child[0] == NULL){
-            fprintf(listing, "ERROR at line(%d) : Conditional Expression is need\n", t->lineno);
+            fprintf(listing, "ERROR at line(%d) : Conditional Expression is needed\n", t->lineno);
             break;
           }
           if(t->child[0]->type == Void){
@@ -327,18 +332,25 @@ static void checkNode(TreeNode * t)
           // error case return type, return value
           //            {void, int}, {void, integerArray}, {int, void}
           //            {int, integerArray}, {integerArray, int}, {integerArray, void}
-          if(t->child[0] != NULL){
-            BucketList func = st_lookat(globalScope, funcName);
-            if((func->type == Void && t->child[0] == NULL) || (func->type == Void && t->child[0]->type == Void) ||
-                (func->type == Integer && t->child[0]->type == Integer)){
-                break;
-            }
-            else{
-                fprintf(listing, "ERROR at line(%d): Return type does not match\n", t->lineno);
-                break;
+          {
+          BucketList func = st_lookat(globalScope, funcName);
+          if(func->type == Void){
+            if(t->child[0] != NULL){
+                fprintf(listing, "ERROR at line(%d) : Should Return Nothing Error\n", t->lineno);
             }
           }
-          fprintf(listing, "RetK !!\n");
+          else{ //type matching
+              if(t->child[0] == NULL){
+                    fprintf(listing, "ERROR at line(%d) : Should Return Something Error\n", t->lineno); 
+              }
+              else{
+                BucketList returnStmt = st_lookup(currentScope, t->child[0]->attr.name);
+                if(func->type != returnStmt->type){
+                    fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
+                }
+              }
+          }
+          }
           break;
         default:
           break;
