@@ -338,7 +338,7 @@ static void checkNode(TreeNode * t)
           //fprintf(listing, "IdK\n");
           { BucketList id = st_lookup(currentScope, t->attr.name);
             if(id == NULL){
-                fprintf(listing, "ERROR : Something Wrong\n");
+                fprintf(listing, "ERROR at line(%d): Variable is not declared before\n", t->lineno);
                 break;
             }
             t->type = id->type; 
@@ -348,7 +348,7 @@ static void checkNode(TreeNode * t)
           //fprintf(listing, "ArrIdK\n");
           { BucketList arrId = st_lookup(currentScope, t->attr.name);
             if(arrId == NULL){
-                fprintf(listing, "ERROR : Something Wrong\n");
+                fprintf(listing, "ERROR at line(%d): Variable is not declared before\n", t->lineno);
                 break;
             }
             if(t->child[0] == NULL) // array
@@ -368,13 +368,37 @@ static void checkNode(TreeNode * t)
             TreeNode* arg = t->child[0];
             int cntError = 0;
             while(arg != NULL){
-                if(arg->type != func->params[argCnt]){
+                ExpType argType;
+                if(arg->nodekind == ExpK && (arg->kind.exp == OpK || arg->kind.exp == ConstK)){
+                    argType = arg->type;
+                }
+                else{
+                    BucketList argBucket = st_lookup(currentScope, arg->attr.name);
+                    if(argBucket == NULL){
+                        fprintf(listing, "ERROR at line(%d) : Argument does not declared before\n", t->lineno);
+                        break;
+                    }
+                    if(argBucket->type == IntegerArray){
+                        argType = arg->type;
+                    }
+                    else{
+                        argType = argBucket->type;
+                    }
+                }
+                /*if(argType == Integer)
+                    fprintf(listing, "argType is Integer\n");
+                else if(argType == IntegerArray)
+                    fprintf(listing, "argType is IntegerArray\n");
+                else
+                    fprintf(listing, "argType is Void\n");*/
+
+                if(argType != func->params[argCnt]){
                     fprintf(listing, "ERROR at line(%d) : Argument type does not match\n", t->lineno);
                     break;
                 }
                 argCnt++;
                 arg = arg->sibling;
-                if(argCnt > func->paramNumber){
+                if(argCnt >= func->paramNumber && arg != NULL){
                     fprintf(listing, "ERROR at line(%d) : Argument Count does not match\n", t->lineno);
                     cntError = 1;
                     break;
@@ -452,8 +476,17 @@ static void checkNode(TreeNode * t)
                         fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
                 }
                 else{
-                    if(func->type != t->child[0]->type){
-                        fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
+                    if(t->child[0]->kind.exp == CallK){
+                        char* callFunc = t->child[0]->attr.name;
+                        BucketList bucketFunc = st_lookat(globalScope, callFunc);
+                        if(func->type != bucketFunc->type){
+                            fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
+                        }
+                    }
+                    else{
+                        if(func->type != t->child[0]->type){
+                            fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
+                        }
                     }
                 }
             }
