@@ -256,29 +256,47 @@ static void beforeCheckNode(TreeNode* t){
 }
 
 static void checkNode(TreeNode * t)
-{ 
+{
   switch (t->nodekind)
   { case ExpK:
       switch (t->kind.exp)
       { case AssignK:
           {//var but type is void
-          BucketList lhs = st_lookup(currentScope, t->child[0]->attr.name);
-          BucketList rhs = st_lookup(currentScope, t->child[1]->attr.name);
-          if(lhs->type == Void || rhs->type == Void){
+          //fprintf(listing, "AssignK\n");
+          ExpType lhsType;
+          ExpType rhsType;
+          //fprintf(listing, "AssignK\n");
+          if(t->child[0]->kind.exp != ConstK && t->child[0]->kind.exp != OpK){
+            BucketList lhs = st_lookup(currentScope, t->child[0]->attr.name);
+            lhsType = lhs->type;
+          }
+          else
+              lhsType = t->child[0]->type;
+          //fprintf(listing, "AssignK\n");
+          if(t->child[1]->kind.exp != ConstK && t->child[1]->kind.exp != OpK){
+            BucketList rhs = st_lookup(currentScope, t->child[1]->attr.name);
+            rhsType = rhs->type;
+          }
+          else
+              rhsType = t->child[1]->type;
+
+          //fprintf(listing, "AssignK\n");
+          if(lhsType == Void || rhsType == Void){
             fprintf(listing, "ERROR at line(%d) : Variable type cannot be Void\n", t->lineno);
           }
           // integer array but type is void
-          else if(lhs->type == IntegerArray && rhs->type == Integer){
+          else if(lhsType == IntegerArray && rhsType == Integer){
             fprintf(listing, "ERROR at line(%d) : Variable type does not match\n", t->lineno);
           }
-          else if(lhs->type == Integer && rhs->type == IntegerArray){
+          else if(lhsType == Integer && rhsType == IntegerArray){
             fprintf(listing, "ERROR at line(%d) : Variable type does not match\n", t->lineno);
           }
           else
-              t->type = t->child[0]->type;
+              t->type = lhsType;
           }
           break;
         case OpK:
+          //fprintf(listing, "OpK\n");
           { TreeNode* left = t->child[0];
             TreeNode* right = t->child[1];
             if(left->type == Void || right->type == Void){
@@ -307,6 +325,7 @@ static void checkNode(TreeNode * t)
           t->type = Integer;
           break;
         case IdK:
+          //fprintf(listing, "IdK\n");
           { BucketList id = st_lookup(currentScope, t->attr.name);
             if(id == NULL){
                 fprintf(listing, "ERROR : Something Wrong\n");
@@ -316,14 +335,28 @@ static void checkNode(TreeNode * t)
           }
           break;
         case ArrIdK:
+          //fprintf(listing, "ArrIdK\n");
+          { BucketList arrId = st_lookup(currentScope, t->attr.name);
+            if(arrId == NULL){
+                fprintf(listing, "ERROR : Something Wrong\n");
+                break;
+            }
+            if(t->child[0] == NULL) // array
+                t->type = IntegerArray;
+            else{ //element of arr
+                t->type = Integer;
+            }
+          }
           break;
         case CallK:
+          fprintf(listing, "CallK !!\n");
           break;
         default:
           break;
       }
       break;
     case StmtK:
+          //fprintf(listing, "StmtK\n");
       switch (t->kind.stmt)
       {case IfK:
           if(t->child[0] == NULL){
@@ -379,8 +412,7 @@ static void checkNode(TreeNode * t)
                         fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
                 }
                 else{
-                    BucketList returnStmt = st_lookup(currentScope, t->child[0]->attr.name);
-                    if(func->type != returnStmt->type){
+                    if(func->type != t->child[0]->type){
                         fprintf(listing, "ERROR at line(%d) : Function type and Return type Does not match\n", t->lineno);
                     }
                 }
